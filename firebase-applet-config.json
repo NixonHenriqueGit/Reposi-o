@@ -1,9 +1,9 @@
 {
-  "apiKey": "",
-  "authDomain": "",
-  "projectId": "",
-  "storageBucket": "",
-  "messagingSenderId": "",
-  "appId": "",
+  "apiKey": "AIzaSyCNeRWfV7L-i3X1GBegzETsEbpGkmK_s4g",
+  "authDomain": "banco-03-6b1ea.firebaseapp.com",
+  "projectId": "banco-03-6b1ea",
+  "storageBucket": "banco-03-6b1ea.firebasestorage.app",
+  "messagingSenderId": "645365828863",
+  "appId": "1:645365828863:web:beb28f8f10226a02e210ca",
   "firestoreDatabaseId": "(default)"
 }
