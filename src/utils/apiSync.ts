@@ -196,7 +196,7 @@ let isSyncingFromFirestore = false;
 
 function getItemId(item: any): string {
   if (!item) return "";
-  const rawId = item.id || item.codigo || item.cpf || item.nome || item.username;
+  const rawId = item.username || item.id || item.codigo || item.cpf || item.nome;
   if (!rawId) return "";
   return String(rawId).replace(/[\/\s#\?]/g, "_");
 }

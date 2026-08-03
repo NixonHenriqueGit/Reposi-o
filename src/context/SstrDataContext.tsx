@@ -213,13 +213,22 @@ export const SstrDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (!firestoreDb) return;
     const colRef = collection(firestoreDb, "managers");
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
-      const items = snapshot.docs.map(doc => doc.data());
+      const items = snapshot.docs.map(doc => {
+        const d = doc.data();
+        const username = String(d.username || d.login || d.id || doc.id || "").toLowerCase().replace(/^@+/, "");
+        return {
+          ...d,
+          username: username,
+          name: d.name || d.nome || username,
+          password: String(d.password || "").trim()
+        };
+      });
       setManagers(prev => {
         const map = new Map<string, any>();
         // Remote Firestore items first
         items.forEach(m => {
           if (m && m.username) {
-            map.set(String(m.username).toLowerCase().replace(/^@+/, ""), m);
+            map.set(m.username, m);
           }
         });
         // Check local state managers to preserve any locally added managers
@@ -354,22 +363,28 @@ export const SstrDataProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const saveManager = async (manager: any) => {
-    const key = manager.username || manager.id;
+    const key = String(manager.username || manager.id || "").toLowerCase().replace(/^@+/, "");
+    const cleanedManager = {
+      username: key,
+      password: String(manager.password || "").trim(),
+      name: manager.name || manager.nome || key
+    };
     setManagers(prev => {
-      const updated = [...prev.filter(m => (m.username || m.id) !== key), manager];
+      const updated = [...prev.filter(m => String(m.username || m.id || "").toLowerCase().replace(/^@+/, "") !== key), cleanedManager];
       safeSetItem("sstr_registered_managers", JSON.stringify(updated));
       return updated;
     });
-    await setFirestoreDoc("managers", key, manager);
+    await setFirestoreDoc("managers", key, cleanedManager);
   };
 
   const deleteManager = async (username: string) => {
+    const key = String(username || "").toLowerCase().replace(/^@+/, "");
     setManagers(prev => {
-      const updated = prev.filter(m => (m.username || m.id) !== username);
+      const updated = prev.filter(m => String(m.username || m.id || "").toLowerCase().replace(/^@+/, "") !== key);
       safeSetItem("sstr_registered_managers", JSON.stringify(updated));
       return updated;
     });
-    await deleteFirestoreDoc("managers", username);
+    await deleteFirestoreDoc("managers", key);
   };
 
   const saveCrewMember = async (crew: CrewMember) => {

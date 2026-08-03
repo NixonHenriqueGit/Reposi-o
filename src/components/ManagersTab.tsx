@@ -2656,11 +2656,11 @@ export default function ManagersTab() {
                           <div className="inline-flex items-center gap-1.5 justify-center">
                             <button
                               onClick={() => {
-                                setEditingManagerUsername(m.username);
                                 setNewName(m.name);
                                 setNewUsername(m.username);
                                 setNewPassword(m.password || "");
-                                document.getElementById("gestor-rns-container")?.scrollIntoView({ behavior: "smooth" });
+                                setEditingManagerUsername(m.username);
+                                document.getElementById("gestor-cadastros-container")?.scrollIntoView({ behavior: "smooth" });
                               }}
                               className="p-1 w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-850 text-slate-400 hover:text-indigo-400 cursor-pointer transition-colors"
                               title="Editar supervisor"
