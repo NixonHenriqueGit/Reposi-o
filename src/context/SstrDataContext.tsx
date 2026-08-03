@@ -207,16 +207,36 @@ export const SstrDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     return () => unsubscribe();
   }, []);
 
-  // Real-time listener for Managers (Task 2 & 3)
+  // Real-time listener for Managers
   useEffect(() => {
     if (!firestoreDb) return;
     const colRef = collection(firestoreDb, "managers");
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const items = snapshot.docs.map(doc => doc.data());
-      if (items.length > 0) {
-        setManagers(items);
-        safeSetItem("sstr_registered_managers", JSON.stringify(items));
-      }
+      setManagers(prev => {
+        const map = new Map<string, any>();
+        // Remote Firestore items first
+        items.forEach(m => {
+          if (m && m.username) {
+            map.set(String(m.username).toLowerCase().replace(/^@+/, ""), m);
+          }
+        });
+        // Check local state managers to preserve any locally added managers
+        prev.forEach(m => {
+          if (m && m.username) {
+            const norm = String(m.username).toLowerCase().replace(/^@+/, "");
+            if (!map.has(norm)) {
+              map.set(norm, m);
+              setFirestoreDoc("managers", norm, m);
+            }
+          }
+        });
+        const merged = Array.from(map.values());
+        if (merged.length > 0) {
+          safeSetItem("sstr_registered_managers", JSON.stringify(merged));
+        }
+        return merged;
+      });
     }, (err) => {
       console.warn("[CONTEXT-MANAGERS-LISTENER] Error subscribing to managers:", err);
     });

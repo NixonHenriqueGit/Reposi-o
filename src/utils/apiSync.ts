@@ -604,6 +604,37 @@ function subscribeCollection(collectionName: string, localKey: string, isObject:
         } catch (e) {}
       }
 
+      if (localKey === "sstr_registered_managers" && Array.isArray(remoteVal)) {
+        try {
+          const localArr = localStr ? JSON.parse(localStr) : [];
+          if (Array.isArray(localArr) && localArr.length > 0) {
+            const remoteMap = new Map<string, any>();
+            remoteVal.forEach((m: any) => {
+              if (m && m.username) remoteMap.set(String(m.username).toLowerCase().replace(/^@+/, ""), m);
+            });
+
+            let pushed = false;
+            localArr.forEach((m: any) => {
+              if (m && m.username) {
+                const norm = String(m.username).toLowerCase().replace(/^@+/, "");
+                if (!remoteMap.has(norm)) {
+                  remoteMap.set(norm, m);
+                  pushed = true;
+                  setFirestoreDoc("managers", norm, m);
+                }
+              }
+            });
+
+            if (pushed) {
+              remoteVal = Array.from(remoteMap.values());
+              remoteStr = JSON.stringify(remoteVal);
+            }
+          }
+        } catch (e) {
+          console.warn("[SYNC-MANAGERS-MERGE-WARN]", e);
+        }
+      }
+
       if (localStr !== remoteStr) {
         isSyncingFromFirestore = true;
         safeSetItem(localKey, remoteStr);

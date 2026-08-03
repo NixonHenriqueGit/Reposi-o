@@ -55,7 +55,7 @@ export default function ManagerLogin({ onLoginSuccess, onCancel }: ManagerLoginP
       // Fallback: If not found in local storage cache, fetch directly from Firestore (handles newly registered users on slow/lagging connections)
       if (!matched) {
         try {
-          const { doc, getDoc } = await import("firebase/firestore");
+          const { doc, getDoc, collection, getDocs } = await import("firebase/firestore");
           const { firestoreDb } = await import("../utils/apiSync");
           
           if (firestoreDb) {
@@ -66,12 +66,32 @@ export default function ManagerLogin({ onLoginSuccess, onCancel }: ManagerLoginP
               const remoteManager = docSnap.data();
               if (remoteManager && remoteManager.password === checkPass) {
                 matched = remoteManager;
-                
-                // Insert/update local storage to avoid redundant network roundtrips in the future
-                const filteredList = registeredList.filter((m: any) => m && m.username && m.username.toLowerCase().replace(/^@+/, "") !== checkUser);
-                const updatedList = [...filteredList, remoteManager];
-                localStorage.setItem("sstr_registered_managers", JSON.stringify(updatedList));
               }
+            }
+
+            // Secondary fallback: Scan all remote manager docs in collection if exact doc lookup missed
+            if (!matched) {
+              const colRef = collection(firestoreDb, "managers");
+              const colSnap = await getDocs(colRef);
+              colSnap.docs.forEach((d) => {
+                const data = d.data();
+                if (
+                  data &&
+                  data.username &&
+                  typeof data.username === "string" &&
+                  data.username.toLowerCase().replace(/^@+/, "") === checkUser &&
+                  data.password === checkPass
+                ) {
+                  matched = data;
+                }
+              });
+            }
+
+            if (matched) {
+              // Insert/update local storage to avoid redundant network roundtrips in the future
+              const filteredList = registeredList.filter((m: any) => m && m.username && m.username.toLowerCase().replace(/^@+/, "") !== checkUser);
+              const updatedList = [...filteredList, matched];
+              localStorage.setItem("sstr_registered_managers", JSON.stringify(updatedList));
             }
           }
         } catch (err) {
