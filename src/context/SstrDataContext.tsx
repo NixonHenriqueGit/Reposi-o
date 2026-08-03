@@ -106,7 +106,8 @@ export const SstrDataProvider: React.FC<{ children: ReactNode }> = ({ children }
     setBatches(readLocal("sstr_cached_batches_v1", []));
     setManagers(readLocal("sstr_registered_managers", [
       { username: "gestor", password: "paubrasil2026", name: "Gestor Principal" },
-      { username: "admin", password: "admin", name: "Administrador" }
+      { username: "admin", password: "admin", name: "Administrador" },
+      { username: "g1009", password: "123", name: "Nixon Henrique" }
     ]));
     setCrewList(readLocal("sstr_lista_crew", DEFAULT_LISTA_CREW));
     setRepsList(readLocal("sstr_reps_setor", DEFAULT_REPRESENTATIVOS_SETOR));

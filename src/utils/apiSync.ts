@@ -825,7 +825,8 @@ function seedLocalStorageDefaults() {
   };
   const defaultManagers = [
     { username: "gestor", password: "paubrasil2026", name: "Gestor Principal" },
-    { username: "admin", password: "admin", name: "Administrador" }
+    { username: "admin", password: "admin", name: "Administrador" },
+    { username: "g1009", password: "123", name: "Nixon Henrique" }
   ];
 
   safeSetItem("sstr_cached_records_v1", JSON.stringify(defaultRecords));
@@ -853,7 +854,8 @@ async function seedFirestoreBaselines() {
   };
   const defaultManagers = [
     { username: "gestor", password: "paubrasil2026", name: "Gestor Principal" },
-    { username: "admin", password: "admin", name: "Administrador" }
+    { username: "admin", password: "admin", name: "Administrador" },
+    { username: "g1009", password: "123", name: "Nixon Henrique" }
   ];
 
   isSyncingFromFirestore = true;

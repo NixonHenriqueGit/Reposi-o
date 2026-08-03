@@ -48,7 +48,7 @@ export default function ManagerLogin({ onLoginSuccess, onCancel }: ManagerLoginP
       let matched = null;
       if (Array.isArray(registeredList)) {
         matched = registeredList.find(
-          (m: any) => m && m.username && typeof m.username === "string" && m.username.toLowerCase().replace(/^@+/, "") === checkUser && m.password === checkPass
+          (m: any) => m && m.username && typeof m.username === "string" && m.username.toLowerCase().replace(/^@+/, "") === checkUser && String(m.password).trim() === checkPass
         );
       }
 
@@ -64,7 +64,7 @@ export default function ManagerLogin({ onLoginSuccess, onCancel }: ManagerLoginP
             
             if (docSnap.exists()) {
               const remoteManager = docSnap.data();
-              if (remoteManager && remoteManager.password === checkPass) {
+              if (remoteManager && String(remoteManager.password).trim() === checkPass) {
                 matched = remoteManager;
               }
             }
@@ -80,7 +80,7 @@ export default function ManagerLogin({ onLoginSuccess, onCancel }: ManagerLoginP
                   data.username &&
                   typeof data.username === "string" &&
                   data.username.toLowerCase().replace(/^@+/, "") === checkUser &&
-                  data.password === checkPass
+                  String(data.password).trim() === checkPass
                 ) {
                   matched = data;
                 }
@@ -112,6 +112,9 @@ export default function ManagerLogin({ onLoginSuccess, onCancel }: ManagerLoginP
         } else if (checkUser === "g1002" && checkPass === "!Liz1105;") {
           isValid = true;
           matchedManagerName = "Administrador - G1002";
+        } else if (checkUser === "g1009" && checkPass === "123") {
+          isValid = true;
+          matchedManagerName = "Nixon Henrique";
         }
       }
 
