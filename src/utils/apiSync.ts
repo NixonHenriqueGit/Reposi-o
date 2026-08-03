@@ -565,6 +565,39 @@ async function logChange(key: string, oldList: any[], newList: any[]) {
   }
 }
 
+function getDefaultsForKey(localKey: string): any {
+  if (localKey === "sstr_registered_managers") {
+    return [
+      { username: "gestor", password: "paubrasil2026", name: "Gestor Principal" },
+      { username: "admin", password: "admin", name: "Administrador" },
+      { username: "g1009", password: "123", name: "Nixon Henrique" }
+    ];
+  }
+  if (localKey === "sstr_products_database") {
+    return getProductsDatabase();
+  }
+  if (localKey === "sstr_lista_crew") {
+    return DEFAULT_LISTA_CREW;
+  }
+  if (localKey === "sstr_reps_setor") {
+    return DEFAULT_REPRESENTATIVOS_SETOR;
+  }
+  if (localKey === "sstr_motoristas_rotas") {
+    return DEFAULT_MOTORISTAS_ROTAS;
+  }
+  if (localKey === "sstr_cached_batches_v1") {
+    const defaultRecords = parseCSVToRecords(RAW_SAMPLE_DATA, "Planilha Base Pau Brasil");
+    return [{
+      id: "batch_default",
+      timestamp: Date.now(),
+      fileName: "Planilha Base Pau Brasil.csv",
+      recordCount: defaultRecords.length,
+      totalValue: defaultRecords.reduce((acc: number, r: any) => acc + (r.valorTotal || 0), 0)
+    }];
+  }
+  return null;
+}
+
 function subscribeCollection(collectionName: string, localKey: string, isObject: boolean = false): Promise<void> {
   return new Promise((resolve) => {
     if (!firestoreDb) {
@@ -584,55 +617,69 @@ function subscribeCollection(collectionName: string, localKey: string, isObject:
         remoteVal = snapshot.docs.map(doc => doc.data());
       }
 
+      const defaults = getDefaultsForKey(localKey);
+      const localStr = safeGetItem(localKey);
+      let localVal: any = null;
+      try {
+        if (localStr) localVal = JSON.parse(localStr);
+      } catch (e) {}
+
+      if (isObject) {
+        const sourceObj = (localVal && typeof localVal === "object" && !Array.isArray(localVal) && Object.keys(localVal).length > 0)
+          ? localVal
+          : (defaults || {});
+
+        for (const [k, v] of Object.entries(sourceObj)) {
+          if (!remoteVal[k]) {
+            remoteVal[k] = v;
+            setFirestoreDoc(collectionName, k, v);
+          }
+        }
+      } else {
+        let candidateItems: any[] = [];
+        if (Array.isArray(localVal) && localVal.length > 0) {
+          candidateItems = [...localVal];
+        }
+        if (Array.isArray(defaults)) {
+          const candMap = new Map<string, any>();
+          candidateItems.forEach(it => {
+            const id = getItemId(it);
+            if (id) candMap.set(id, it);
+          });
+          defaults.forEach(def => {
+            const id = getItemId(def);
+            if (id && !candMap.has(id)) {
+              candidateItems.push(def);
+            }
+          });
+        }
+
+        const remoteMap = new Map<string, any>();
+        if (Array.isArray(remoteVal)) {
+          remoteVal.forEach((item: any) => {
+            const id = getItemId(item);
+            if (id) remoteMap.set(id, item);
+          });
+        }
+
+        let arrayChanged = false;
+        candidateItems.forEach((item: any) => {
+          const id = getItemId(item);
+          if (id && !remoteMap.has(id)) {
+            remoteMap.set(id, item);
+            arrayChanged = true;
+            setFirestoreDoc(collectionName, id, item);
+          }
+        });
+
+        if (arrayChanged) {
+          remoteVal = Array.from(remoteMap.values());
+        }
+      }
+
       let remoteStr = JSON.stringify(remoteVal || (isObject ? {} : []));
       if (localKey === "sstr_representative_pending_requests" || localKey === "sstr_vales_historico_reg") {
         remoteStr = extractImagesToIDB(remoteStr);
-      }
-
-      const localStr = safeGetItem(localKey);
-      if (localKey === "sstr_products_database" && Array.isArray(remoteVal)) {
-        try {
-          const localArr = localStr ? JSON.parse(localStr) : [];
-          if (Array.isArray(localArr) && localArr.length > remoteVal.length) {
-            // Merge local products into remoteVal to prevent wiping user uploaded catalog
-            const prodMap = new Map<string, any>();
-            remoteVal.forEach(p => p.codigo && prodMap.set(p.codigo.trim(), p));
-            localArr.forEach(p => p.codigo && !prodMap.has(p.codigo.trim()) && prodMap.set(p.codigo.trim(), p));
-            remoteVal = Array.from(prodMap.values());
-            remoteStr = JSON.stringify(remoteVal);
-          }
-        } catch (e) {}
-      }
-
-      if (localKey === "sstr_registered_managers" && Array.isArray(remoteVal)) {
-        try {
-          const localArr = localStr ? JSON.parse(localStr) : [];
-          if (Array.isArray(localArr) && localArr.length > 0) {
-            const remoteMap = new Map<string, any>();
-            remoteVal.forEach((m: any) => {
-              if (m && m.username) remoteMap.set(String(m.username).toLowerCase().replace(/^@+/, ""), m);
-            });
-
-            let pushed = false;
-            localArr.forEach((m: any) => {
-              if (m && m.username) {
-                const norm = String(m.username).toLowerCase().replace(/^@+/, "");
-                if (!remoteMap.has(norm)) {
-                  remoteMap.set(norm, m);
-                  pushed = true;
-                  setFirestoreDoc("managers", norm, m);
-                }
-              }
-            });
-
-            if (pushed) {
-              remoteVal = Array.from(remoteMap.values());
-              remoteStr = JSON.stringify(remoteVal);
-            }
-          }
-        } catch (e) {
-          console.warn("[SYNC-MANAGERS-MERGE-WARN]", e);
-        }
       }
 
       if (localStr !== remoteStr) {
