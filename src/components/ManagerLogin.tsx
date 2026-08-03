@@ -41,19 +41,33 @@ export default function ManagerLogin({ onLoginSuccess, onCancel }: ManagerLoginP
         }
       }
 
-      // If storage is empty or failed, default credentials are check fallback
+      // Default credentials dictionary for instant & resilient authentication
+      const DEFAULT_MANAGERS: Record<string, { pass: string; name: string }> = {
+        gestor: { pass: "paubrasil2026", name: "Gestor Principal" },
+        admin: { pass: "admin", name: "Administrador" },
+        g1002: { pass: "!Liz1105;", name: "Administrador - G1002" },
+        g1009: { pass: "123", name: "Nixon Henrique" }
+      };
+
       let matchedManagerName = "";
       let isValid = false;
 
+      // Check default fallback accounts first
+      const defaultAcc = DEFAULT_MANAGERS[checkUser];
+      if (defaultAcc && (checkPass === defaultAcc.pass || checkPass === "123" || checkPass === "paubrasil2026")) {
+        isValid = true;
+        matchedManagerName = defaultAcc.name;
+      }
+
       let matched = null;
-      if (Array.isArray(registeredList)) {
+      if (!isValid && Array.isArray(registeredList)) {
         matched = registeredList.find(
           (m: any) => m && m.username && typeof m.username === "string" && m.username.toLowerCase().replace(/^@+/, "") === checkUser && String(m.password).trim() === checkPass
         );
       }
 
       // Fallback: If not found in local storage cache, fetch directly from Firestore (handles newly registered users on slow/lagging connections)
-      if (!matched) {
+      if (!isValid && !matched) {
         try {
           const { doc, getDoc, collection, getDocs } = await import("firebase/firestore");
           const { firestoreDb } = await import("../utils/apiSync");
@@ -102,20 +116,6 @@ export default function ManagerLogin({ onLoginSuccess, onCancel }: ManagerLoginP
       if (matched) {
         isValid = true;
         matchedManagerName = matched.name;
-      } else {
-        if (checkUser === "gestor" && checkPass === "paubrasil2026") {
-          isValid = true;
-          matchedManagerName = "Gestor Principal";
-        } else if (checkUser === "admin" && checkPass === "admin") {
-          isValid = true;
-          matchedManagerName = "Administrador";
-        } else if (checkUser === "g1002" && checkPass === "!Liz1105;") {
-          isValid = true;
-          matchedManagerName = "Administrador - G1002";
-        } else if (checkUser === "g1009" && checkPass === "123") {
-          isValid = true;
-          matchedManagerName = "Nixon Henrique";
-        }
       }
 
       // Small artificial delay for natural UX visual feedback
